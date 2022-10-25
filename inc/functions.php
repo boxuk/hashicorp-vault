@@ -12,10 +12,12 @@ declare( strict_types = 1 );
 namespace HM\Hashicorp_Vault;
 
 use Exception;
+use Laminas\Diactoros\RequestFactory;
+use Laminas\Diactoros\StreamFactory;
+use Laminas\Diactoros\Uri;
 use RuntimeException;
-use Vault;
-use VaultTransports;
-use Vault\AuthenticationStrategies;
+use Vault\AuthenticationStrategies\TokenAuthenticationStrategy;
+use Vault\Client;
 use WPDesk\Mutex;
 
 /**
@@ -77,14 +79,15 @@ function get_secret( string $secret ) : array {
  * @throws RuntimeException From `csharpru/vault-php`.
  */
 function get_secret_from_vault( string $secret ) : array {
-	$vault = new Vault\Client(
-		new VaultTransports\Guzzle6Transport( [
-			'base_uri' => get_vault_url(),
-		] )
+	$vault = new Client(
+		new Uri( get_vault_url() ),
+		new \AlexTartan\GuzzlePsr18Adapter\Client(),
+		new RequestFactory(),
+		new StreamFactory()
 	);
 
 	$authenticated = $vault
-		->setAuthenticationStrategy( new AuthenticationStrategies\TokenAuthenticationStrategy( get_auth_token() ) )
+		->setAuthenticationStrategy( new TokenAuthenticationStrategy( get_auth_token() ) )
 		->authenticate();
 
 	if ( $authenticated === false ) {
